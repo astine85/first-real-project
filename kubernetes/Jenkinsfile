@@ -56,7 +56,7 @@ pipeline {
                         
                         echo "Deploying to Kubernetes cluster"
                         export KUBECONFIG=${KUBECONFIG}
-                        kubectl apply -f .
+                        kubectl apply -f . --validate=false
                         
                         """
                     }
