@@ -1,6 +1,6 @@
 [
   {
-    "name": "continuous-integration-continuous-deployment",
+    "name": "kubernetes",
     "repo": "https://github.com/astine85/market-vector.git",
     "branch": "main",
     "jenkinsfile": "kubernetes/Jenkinsfile"
