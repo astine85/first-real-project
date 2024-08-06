@@ -40,7 +40,7 @@ pipeline {
                         sh """
                             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382432814.dkr.ecr.us-east-1.amazonaws.com
                             docker tag eks-repo:latest 992382432814.dkr.ecr.us-east-1.amazonaws.com/market-vector:${VERSION}
-                            docker push :992382432814.dkr.ecr.us-east-1.amazonaws.com/market-vector:${VERSION}
+                            docker push 992382432814.dkr.ecr.us-east-1.amazonaws.com/market-vector:${VERSION}
                         """
                     
                 }
