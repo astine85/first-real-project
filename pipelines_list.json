@@ -1,8 +1,16 @@
 [
   {
-    "name": "kubernetes",
+    "name": "terraform-pipeline",
     "repo": "https://github.com/astine85/market-vector.git",
     "branch": "main",
-    "jenkinsfile": "kubernetes/Jenkinsfile"
+    "jenkinsfile": "terraform/Jenkinsfile"
+  },
+
+
+  {
+    "name": "continuous-integration-continuous-deployment",
+    "repo": "https://github.com/astine85/market-vector.git",
+    "branch": "main",
+    "jenkinsfile": "continuous-integration-continuous-deployment/Jenkinsfile"
   }
 ]
