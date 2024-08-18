@@ -27,18 +27,19 @@ pipeline {
             }
         }
 
-        stage('Building Docker Image') {
-            steps {
-                sh "docker build -t eks-repo ."
-            }
-        }
-
+      
            
         stage('Application Build And Test') {
             steps {
                 sh 'chmod +x ./mvnw'
                 sh './mvnw clean install'
                 sh './mvnw test'
+            }
+        }
+
+          stage('Building Docker Image') {
+            steps {
+                sh "docker build -t eks-repo ."
             }
         }
 
