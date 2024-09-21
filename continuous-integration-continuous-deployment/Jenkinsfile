@@ -9,6 +9,7 @@ pipeline {
         string(name: 'UPDATE_SERVICE_FILE', defaultValue: 'continuous-integration-continuous-deployment/update-ecs-service.json', description: 'Path to the update service JSON file')
         string(name: 'SERVICE_NAME', defaultValue: 'marketvector-ecs-service', description: 'ECS Service Name')
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'marketvector-ecs-cluster', description: 'ECS Cluster Name')
+        string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
     }
 
     environment {
@@ -20,6 +21,7 @@ pipeline {
         UPDATE_SERVICE_FILE = "${params.UPDATE_SERVICE_FILE}"
         SERVICE_NAME = "${params.SERVICE_NAME}"
         ECS_CLUSTER_NAME = "${params.ECS_CLUSTER_NAME}"
+        ECR_URI = "${params.ECR_URI}"
     }
 
     stages {
@@ -35,25 +37,33 @@ pipeline {
             }
         }
 
+         stage('Application Build And Test') {
+            steps {
+                sh 'chmod +x ./mvnw'
+                sh './mvnw clean install'
+                sh './mvnw test'
+            }
+        }
+        
         stage('Building Docker Image') {
             steps {
-                sh "docker build -t marketvector-html-image ."
+                sh "docker build -t first-real-project ."
             }
         }
 
         stage('Push To Elastic Container Registry') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    
                         sh """
-                            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 905418280053.dkr.ecr.us-east-1.amazonaws.com
-                            docker tag marketvector-html-image 992382432814.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:${VERSION}
-                            docker push 992382432814.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:${VERSION}
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382432814.dkr.ecr.us-east-1.amazonaws.com
+                            docker tag ${IMAGE_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+                            docker push ${ECR_URI}:${VERSION}
                         """
                     }
                 }
             }
-        }
+        
 
         stage('Update Task Definition') {
             steps {
