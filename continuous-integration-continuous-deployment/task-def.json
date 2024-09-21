@@ -1,5 +1,5 @@
 {
-  "family": "marketvector-app",
+  "family": "first-real-project-app",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "1024",
@@ -8,12 +8,12 @@
   "taskRoleArn": "arn:aws:iam::992382432814:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
-      "name": "marketvector-app",
-      "image": "992382432814.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:V007",
+      "name": "first-real-project-app",
+      "image": "992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project-app-repo:V007",
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 80,
+          "containerPort": 8081,
           "hostPort": 80,
           "protocol": "tcp"
         }
