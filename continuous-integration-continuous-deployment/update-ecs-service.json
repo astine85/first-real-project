@@ -1,16 +1,16 @@
 {
-  "cluster": "marketvector-ecs-cluster",
-  "service": "marketvector-ecs-service",
-  "taskDefinition": "arn:aws:ecs:us-east-1:992382432814:task-definition/marketvector-app:62",
+  "cluster": "first-real-project-ecs-cluster",
+  "service": "first-real-project-ecs-service",
+  "taskDefinition": "arn:aws:ecs:us-east-1:992382432814:task-definition/first-real-project-app:62",
   "desiredCount": 2,
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
-        "subnet-0dca88e8ee5b079ee",
-        "subnet-05b32668c8279eff6"
+        "subnet-06b15b0000edcfb3d",
+        "subnet-091a1ef829c635ccc"
       ],
       "securityGroups": [
-        "sg-08fa0792d95f6976a"
+        "sg-05f3512d8402fd560"
       ],
       "assignPublicIp": "ENABLED"
     }
@@ -18,8 +18,8 @@
   "loadBalancers": [
     {
       "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/marketvector-tg/98cddedb5cd2c42c",
-      "containerName": "marketvector-app",
-      "containerPort": 80
+      "containerName": "first-real-project-app",
+      "containerPort": 8081
     }
   ],
   "deploymentConfiguration": {
