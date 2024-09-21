@@ -65,23 +65,23 @@ pipeline {
             }
         
 
-        stage('Update Task Definition') {
+        stage('Update Task Definition File') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        def image = "992382432814.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:${VERSION}"
+                    
+                        def image = "${ECR_URI}:${VERSION}"
                         def taskDefJson = readFile(file: TASK_DEF_JSON)
-                        taskDefJson = taskDefJson.replaceAll(/"image": "992382432814.dkr.ecr.us-east-1.amazonaws.com\/marketvector-app-repo:[^"]+"/, "\"image\": \"${image}\"")
+                        taskDefJson = taskDefJson.replaceAll(/"image": "992382432814.dkr.ecr.us-east-1.amazonaws.com\/first-real-project:[^"]+"/, "\"image\": \"${image}\"")
                         writeFile(file: TASK_DEF_JSON, text: taskDefJson)
                     }
                 }
             }
-        }
+        
 
-        stage('Register Task Definition') {
+        stage('Register/Create Task Definition') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    
                         def taskDefArn = sh(script: """
                             aws ecs register-task-definition --cli-input-json file://${TASK_DEF_JSON} --query 'taskDefinition.taskDefinitionArn' --output text
                         """, returnStdout: true).trim()
@@ -98,7 +98,7 @@ pipeline {
                     }
                 }
             }
-        }
+        
 
         stage('Stop all running tasks') {
             steps {
