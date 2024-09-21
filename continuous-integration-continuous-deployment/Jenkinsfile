@@ -10,6 +10,8 @@ pipeline {
         string(name: 'SERVICE_NAME', defaultValue: 'marketvector-ecs-service', description: 'ECS Service Name')
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'marketvector-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
+        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project', description: 'IMAGE_NAME')
+        
     }
 
     environment {
@@ -22,6 +24,7 @@ pipeline {
         SERVICE_NAME = "${params.SERVICE_NAME}"
         ECS_CLUSTER_NAME = "${params.ECS_CLUSTER_NAME}"
         ECR_URI = "${params.ECR_URI}"
+        IMAGE_NAME = "${params.IMAGE_NAME}"
     }
 
     stages {
@@ -47,7 +50,7 @@ pipeline {
         
         stage('Building Docker Image') {
             steps {
-                sh "docker build -t first-real-project ."
+                sh "docker build -t ${IMAGE_NAME} ."
             }
         }
 
@@ -103,7 +106,7 @@ pipeline {
         stage('Stop all running tasks') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    
                         def serviceExists = sh(script: """
                             aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
                         """, returnStdout: true).trim()
@@ -126,7 +129,7 @@ pipeline {
         stage('Wait for Tasks to Stop') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    
                         def serviceExists = sh(script: """
                             aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
                         """, returnStdout: true).trim()
@@ -152,7 +155,7 @@ pipeline {
         stage('Check and Update ECS Service') {
             steps {
                 script {
-                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws_creds', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    
                         def clientToken = UUID.randomUUID().toString()
                         sh """
                             SERVICE_EXISTS=\$(aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text)
