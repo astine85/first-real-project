@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     parameters {
         string(name: 'BRANCH', defaultValue: 'main', description: 'Branch to build from')
         string(name: 'REPO_URL', defaultValue: 'https://github.com/astine85/first-real-project.git', description: 'Repository URL to build from')
@@ -11,10 +12,9 @@ pipeline {
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'first-real-project-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
         string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'IMAGE_NAME')
-        
     }
 
-     environment {
+    environment {
         BRANCH = "${params.BRANCH}"
         REPO_URL = "${params.REPO_URL}"
         VERSION = "${params.VERSION}"
@@ -28,20 +28,18 @@ pipeline {
     }
 
     stages {
-
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
-        
+
         stage('Clone GitHub Repo') {
             steps {
-                git branch: "${GITHUB_BRANCH}", credentialsId: "${GITHUB_CREDENTIAL}", url: "${GITHUB_REPO_URL}"
+                git branch: "${BRANCH}", credentialsId: 'your-github-credentials-id', url: "${REPO_URL}"
             }
         }
-        
-        
+
         stage('Application Build And Test') {
             steps {
                 sh 'chmod +x ./mvnw'
@@ -50,37 +48,25 @@ pipeline {
             }
         }
 
- /*       stage('SonarQube Analysis') {
-            steps {
-                script {
-                    withSonarQubeEnv("${SONARQUBE_SERVER_NAME}") {
-                        sh './mvnw sonar:sonar'
-                    }
-                }
-            }
-        }
-   */    
-             
         stage('Building Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME} ."
+                sh "docker build -t ${IMAGE_NAME}:${VERSION} ."
             }
         }
 
         stage('Push To Elastic Container Registry') {
             steps {
                 script {
-                    
-                        sh """
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382432814.dkr.ecr.us-east-1.amazonaws.com
-                            docker tag ${IMAGE_NAME}:${VERSION} ${ECR_URI}:${VERSION}
-                            docker push ${ECR_URI}:${VERSION}
-                        """
-                    }
+                    sh """
+                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_URI}
+                    docker tag ${IMAGE_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+                    docker push ${ECR_URI}:${VERSION}
+                    """
                 }
             }
-        
-       stage('Register Task Definition') {
+        }
+
+        stage('Register Task Definition') {
             steps {
                 script {
                     def taskDefArn = sh(script: """
@@ -89,6 +75,7 @@ pipeline {
 
                     echo "Task Definition ARN: ${taskDefArn}"
 
+                    // Update task definition in service files
                     def createServiceJson = readFile(file: CREATE_SERVICE_FILE)
                     createServiceJson = createServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
                     writeFile(file: CREATE_SERVICE_FILE, text: createServiceJson)
@@ -163,6 +150,11 @@ pipeline {
                 }
             }
         }
+    }
 
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
     }
 }
