@@ -31,7 +31,7 @@ variable "service_name" {
 variable "container_port" {
   description = "The port on which the container will listen"
   type        = number
-  default     = 80
+  default     = 8081
 }
 
 variable "desired_count" {
