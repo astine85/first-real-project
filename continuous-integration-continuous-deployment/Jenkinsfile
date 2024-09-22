@@ -12,7 +12,7 @@ pipeline {
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
         string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'Image Name')
         string(name: 'TARGET_GROUP_NAME', defaultValue: 'marketvector-tg', description: 'Target Group Name')
-        string(name: 'VPC_ID', defaultValue: 'your-vpc-id', description: 'VPC ID') // Replace with your actual VPC ID
+        string(name: 'VPC_ID', defaultValue: 'vpc-006e106f9a60525b8', description: 'VPC ID') // Replace with your actual VPC ID
     }
 
     environment {
