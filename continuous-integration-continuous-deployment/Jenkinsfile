@@ -7,10 +7,10 @@ pipeline {
         string(name: 'TASK_DEF_JSON', defaultValue: 'continuous-integration-continuous-deployment/task-def.json', description: 'Path to the task definition JSON file')
         string(name: 'CREATE_SERVICE_FILE', defaultValue: 'continuous-integration-continuous-deployment/create-ecs-service.json', description: 'Path to the create service JSON file')
         string(name: 'UPDATE_SERVICE_FILE', defaultValue: 'continuous-integration-continuous-deployment/update-ecs-service.json', description: 'Path to the update service JSON file')
-        string(name: 'SERVICE_NAME', defaultValue: 'marketvector-ecs-service', description: 'ECS Service Name')
-        string(name: 'ECS_CLUSTER_NAME', defaultValue: 'marketvector-ecs-cluster', description: 'ECS Cluster Name')
+        string(name: 'SERVICE_NAME', defaultValue: 'first-real-project-ecs-service', description: 'ECS Service Name')
+        string(name: 'ECS_CLUSTER_NAME', defaultValue: 'first-real-project-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
-        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project', description: 'IMAGE_NAME')
+        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'IMAGE_NAME')
         
     }
 
