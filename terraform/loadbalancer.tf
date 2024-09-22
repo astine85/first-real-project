@@ -9,7 +9,7 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "main" {
-  name        = "marketvector-tg"
+  name        = "first-real-project-tg"
   port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
