@@ -17,7 +17,7 @@
   },
   "loadBalancers": [
     {
-      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/first-real-project-tg/60db32ad960f0df3",
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/first-real-project-tg/5a88b73cfff95ded",
       "containerName": "first-real-project-app",
       "containerPort": 8081
     }
