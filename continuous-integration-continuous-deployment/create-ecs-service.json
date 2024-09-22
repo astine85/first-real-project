@@ -12,14 +12,14 @@
         "subnet-091a1ef829c635ccc"
       ],
       "securityGroups": [
-        "sg-05f3512d8402fd560"
+        "sg-07a2791f370db65fc"
       ],
       "assignPublicIp": "ENABLED"
     }
   },
   "loadBalancers": [
     {
-      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/marketvector-tg/98cddedb5cd2c42c",
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/first-real-project-tg/60db32ad960f0df3",
       "containerName": "first-real-project-app",
       "containerPort": 8081
     }
