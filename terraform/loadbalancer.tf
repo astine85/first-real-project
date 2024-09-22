@@ -1,5 +1,5 @@
 resource "aws_lb" "main" {
-  name               = "marketvector-lb"
+  name               = "first-real-project-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.ecs.id]
