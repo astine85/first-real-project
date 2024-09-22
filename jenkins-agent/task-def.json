@@ -4,12 +4,12 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "1024",
   "memory": "2048",
-  "executionRoleArn": "arn:aws:iam::905418280053:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::905418280053:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::992382432814:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::992382432814:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "jenkins-agent",
-      "image": "905418280053.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:V001",
+      "image": "992382432814.dkr.ecr.us-east-1.amazonaws.com/marketvector-app-repo:V001",
       "essential": true,
       "portMappings": [
         {
@@ -21,7 +21,7 @@
       "environment": [
         {
           "name": "JENKINS_URL",
-          "value": "http://54.145.85.177:8080"
+          "value": "http://52.204.231.247:8080"
         },
         {
           "name": "JENKINS_AGENT_NAME",
