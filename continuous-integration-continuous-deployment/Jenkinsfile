@@ -11,10 +11,12 @@ pipeline {
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'first-real-project-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
         string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'Image Name')
+        string(name: 'TARGET_GROUP_NAME', defaultValue: 'marketvector-tg', description: 'Target Group Name')
+        string(name: 'VPC_ID', defaultValue: 'your-vpc-id', description: 'VPC ID') // Replace with your actual VPC ID
     }
 
     environment {
-        GITHUB_CREDENTIAL = 'your-github-credentials-id' // Update this line with your actual credentials ID
+        GITHUB_CREDENTIAL = 'your-github-credentials-id' // Update with your actual credentials ID
     }
 
     stages {
@@ -59,10 +61,25 @@ pipeline {
         stage('Check and Create Target Group') {
             steps {
                 script {
+                    // Check if the target group exists
                     def targetGroupArn = sh(script: """
-                        aws elbv2 create-target-group --name marketvector-tg --protocol HTTP --port 8081 --vpc-id your-vpc-id --query 'TargetGroups[0].TargetGroupArn' --output text || echo "Target group already exists."
+                        aws elbv2 describe-target-groups --names ${params.TARGET_GROUP_NAME} --query 'TargetGroups[0].TargetGroupArn' --output text
                     """, returnStdout: true).trim()
-                    echo "Target Group ARN: ${targetGroupArn}"
+
+                    if (targetGroupArn == "None") {
+                        echo "Target group ${params.TARGET_GROUP_NAME} does not exist. Creating target group..."
+                        targetGroupArn = sh(script: """
+                            aws elbv2 create-target-group --name ${params.TARGET_GROUP_NAME} --protocol HTTP --port 8081 --vpc-id ${params.VPC_ID} --query 'TargetGroups[0].TargetGroupArn' --output text
+                        """, returnStdout: true).trim()
+                        echo "Created Target Group ARN: ${targetGroupArn}"
+                    } else {
+                        echo "Using existing Target Group ARN: ${targetGroupArn}"
+                    }
+
+                    // Update the create service JSON with the target group ARN
+                    def createServiceJson = readFile(file: params.CREATE_SERVICE_FILE)
+                    createServiceJson = createServiceJson.replaceAll(/"targetGroupArn": "[^"]+"/, "\"targetGroupArn\": \"${targetGroupArn}\"")
+                    writeFile(file: params.CREATE_SERVICE_FILE, text: createServiceJson)
                 }
             }
         }
@@ -75,11 +92,7 @@ pipeline {
                     """, returnStdout: true).trim()
                     echo "Registered Task Definition ARN: ${taskDefArn}"
 
-                    // Update the task definition file if necessary
-                    def createServiceJson = readFile(file: params.CREATE_SERVICE_FILE)
-                    createServiceJson = createServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
-                    writeFile(file: params.CREATE_SERVICE_FILE, text: createServiceJson)
-
+                    // Update the update service JSON with the task definition ARN
                     def updateServiceJson = readFile(file: params.UPDATE_SERVICE_FILE)
                     updateServiceJson = updateServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
                     writeFile(file: params.UPDATE_SERVICE_FILE, text: updateServiceJson)
@@ -95,6 +108,7 @@ pipeline {
                     """, returnStdout: true).trim()
 
                     if (serviceExists) {
+                        echo "Stopping running tasks for service ${params.SERVICE_NAME}..."
                         sh """
                         tasks=\$(aws ecs list-tasks --cluster ${params.ECS_CLUSTER_NAME} --service-name ${params.SERVICE_NAME} --desired-status RUNNING --query taskArns --output text)
                         for task in \$tasks; do
@@ -116,6 +130,7 @@ pipeline {
                     """, returnStdout: true).trim()
 
                     if (serviceExists) {
+                        echo "Waiting for tasks to stop for service ${params.SERVICE_NAME}..."
                         timeout(time: 5, unit: 'MINUTES') {
                             waitUntil {
                                 def tasks = sh(script: """
