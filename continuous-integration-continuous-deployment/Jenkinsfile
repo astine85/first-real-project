@@ -10,20 +10,11 @@ pipeline {
         string(name: 'SERVICE_NAME', defaultValue: 'first-real-project-ecs-service', description: 'ECS Service Name')
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'first-real-project-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
-        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'IMAGE_NAME')
+        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'Image Name')
     }
 
     environment {
-        BRANCH = "${params.BRANCH}"
-        REPO_URL = "${params.REPO_URL}"
-        VERSION = "${params.VERSION}"
-        TASK_DEF_JSON = "${params.TASK_DEF_JSON}"
-        CREATE_SERVICE_FILE = "${params.CREATE_SERVICE_FILE}"
-        UPDATE_SERVICE_FILE = "${params.UPDATE_SERVICE_FILE}"
-        SERVICE_NAME = "${params.SERVICE_NAME}"
-        ECS_CLUSTER_NAME = "${params.ECS_CLUSTER_NAME}"
-        ECR_URI = "${params.ECR_URI}"
-        IMAGE_NAME = "${params.IMAGE_NAME}"
+        GITHUB_CREDENTIAL = 'your-github-credentials-id' // Update this line with your actual credentials ID
     }
 
     stages {
@@ -32,13 +23,13 @@ pipeline {
                 cleanWs()
             }
         }
-        
+
         stage('Clone GitHub Repo') {
             steps {
-                git branch: "${BRANCH}", credentialsId: "${GITHUB_CREDENTIAL}", url: "${REPO_URL}"
+                git branch: "${params.BRANCH}", credentialsId: "${GITHUB_CREDENTIAL}", url: "${params.REPO_URL}"
             }
         }
-        
+
         stage('Application Build And Test') {
             steps {
                 sh 'chmod +x ./mvnw'
@@ -49,7 +40,7 @@ pipeline {
 
         stage('Building Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME} ."
+                sh "docker build -t ${params.IMAGE_NAME}:${params.VERSION} ."
             }
         }
 
@@ -57,21 +48,21 @@ pipeline {
             steps {
                 script {
                     sh """
-                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_URI}
-                    docker tag ${IMAGE_NAME}:${VERSION} ${ECR_URI}:${VERSION}
-                    docker push ${ECR_URI}:${VERSION}
+                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${params.ECR_URI}
+                    docker tag ${params.IMAGE_NAME}:${params.VERSION} ${params.ECR_URI}:${params.VERSION}
+                    docker push ${params.ECR_URI}:${params.VERSION}
                     """
                 }
             }
         }
 
-        stage('Create Target Group') {
+        stage('Check and Create Target Group') {
             steps {
                 script {
                     def targetGroupArn = sh(script: """
-                        aws elbv2 create-target-group --name marketvector-tg --protocol HTTP --port 8081 --vpc-id your-vpc-id --query 'TargetGroups[0].TargetGroupArn' --output text
+                        aws elbv2 create-target-group --name marketvector-tg --protocol HTTP --port 8081 --vpc-id your-vpc-id --query 'TargetGroups[0].TargetGroupArn' --output text || echo "Target group already exists."
                     """, returnStdout: true).trim()
-                    echo "Created Target Group ARN: ${targetGroupArn}"
+                    echo "Target Group ARN: ${targetGroupArn}"
                 }
             }
         }
@@ -80,18 +71,18 @@ pipeline {
             steps {
                 script {
                     def taskDefArn = sh(script: """
-                        aws ecs register-task-definition --cli-input-json file://${TASK_DEF_JSON} --query 'taskDefinition.taskDefinitionArn' --output text
+                        aws ecs register-task-definition --cli-input-json file://${params.TASK_DEF_JSON} --query 'taskDefinition.taskDefinitionArn' --output text
                     """, returnStdout: true).trim()
+                    echo "Registered Task Definition ARN: ${taskDefArn}"
 
-                    echo "Task Definition ARN: ${taskDefArn}"
-
-                    def createServiceJson = readFile(file: CREATE_SERVICE_FILE)
+                    // Update the task definition file if necessary
+                    def createServiceJson = readFile(file: params.CREATE_SERVICE_FILE)
                     createServiceJson = createServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
-                    writeFile(file: CREATE_SERVICE_FILE, text: createServiceJson)
+                    writeFile(file: params.CREATE_SERVICE_FILE, text: createServiceJson)
 
-                    def updateServiceJson = readFile(file: UPDATE_SERVICE_FILE)
+                    def updateServiceJson = readFile(file: params.UPDATE_SERVICE_FILE)
                     updateServiceJson = updateServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
-                    writeFile(file: UPDATE_SERVICE_FILE, text: updateServiceJson)
+                    writeFile(file: params.UPDATE_SERVICE_FILE, text: updateServiceJson)
                 }
             }
         }
@@ -100,18 +91,18 @@ pipeline {
             steps {
                 script {
                     def serviceExists = sh(script: """
-                        aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
+                        aws ecs describe-services --cluster ${params.ECS_CLUSTER_NAME} --services ${params.SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
                     """, returnStdout: true).trim()
 
                     if (serviceExists) {
                         sh """
-                        tasks=\$(aws ecs list-tasks --cluster ${ECS_CLUSTER_NAME} --service-name ${SERVICE_NAME} --desired-status RUNNING --query taskArns --output text)
+                        tasks=\$(aws ecs list-tasks --cluster ${params.ECS_CLUSTER_NAME} --service-name ${params.SERVICE_NAME} --desired-status RUNNING --query taskArns --output text)
                         for task in \$tasks; do
-                            aws ecs stop-task --cluster ${ECS_CLUSTER_NAME} --task \$task
+                            aws ecs stop-task --cluster ${params.ECS_CLUSTER_NAME} --task \$task
                         done
                         """
                     } else {
-                        echo "Service ${SERVICE_NAME} does not exist. Skipping stop tasks step."
+                        echo "Service ${params.SERVICE_NAME} does not exist. Skipping stop tasks step."
                     }
                 }
             }
@@ -121,21 +112,21 @@ pipeline {
             steps {
                 script {
                     def serviceExists = sh(script: """
-                        aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
+                        aws ecs describe-services --cluster ${params.ECS_CLUSTER_NAME} --services ${params.SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
                     """, returnStdout: true).trim()
 
                     if (serviceExists) {
                         timeout(time: 5, unit: 'MINUTES') {
                             waitUntil {
                                 def tasks = sh(script: """
-                                    aws ecs list-tasks --cluster ${ECS_CLUSTER_NAME} --service-name ${SERVICE_NAME} --desired-status RUNNING --query taskArns --output text
+                                    aws ecs list-tasks --cluster ${params.ECS_CLUSTER_NAME} --service-name ${params.SERVICE_NAME} --desired-status RUNNING --query taskArns --output text
                                 """, returnStdout: true).trim()
 
                                 return tasks == null || tasks.isEmpty()
                             }
                         }
                     } else {
-                        echo "Service ${SERVICE_NAME} does not exist. Skipping wait for tasks to stop step."
+                        echo "Service ${params.SERVICE_NAME} does not exist. Skipping wait for tasks to stop step."
                     }
                 }
             }
@@ -146,18 +137,27 @@ pipeline {
                 script {
                     def clientToken = UUID.randomUUID().toString()
                     sh """
-                    SERVICE_EXISTS=\$(aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text)
+                    SERVICE_EXISTS=\$(aws ecs describe-services --cluster ${params.ECS_CLUSTER_NAME} --services ${params.SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text)
 
                     if [ -z "\$SERVICE_EXISTS" ]; then
-                      echo "Service ${SERVICE_NAME} does not exist. Creating service..."
-                      aws ecs create-service --cli-input-json file://${CREATE_SERVICE_FILE} --client-token ${clientToken}
+                      echo "Service ${params.SERVICE_NAME} does not exist. Creating service..."
+                      aws ecs create-service --cli-input-json file://${params.CREATE_SERVICE_FILE} --client-token ${clientToken}
                     else
-                      echo "Service ${SERVICE_NAME} exists. Updating service..."
-                      aws ecs update-service --cli-input-json file://${UPDATE_SERVICE_FILE}
+                      echo "Service ${params.SERVICE_NAME} exists. Updating service..."
+                      aws ecs update-service --cli-input-json file://${params.UPDATE_SERVICE_FILE}
                     fi
                     """
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed.'
+        }
+        failure {
+            echo 'Pipeline failed.'
         }
     }
 }
