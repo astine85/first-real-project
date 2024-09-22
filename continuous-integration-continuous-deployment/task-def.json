@@ -9,19 +9,19 @@
   "containerDefinitions": [
     {
       "name": "first-real-project-app",
-      "image": "992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project-app:V007",
+      "image": "992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project-app-repo:V0011",
       "essential": true,
       "portMappings": [
         {
           "containerPort": 8081,
-          "hostPort": 8081,  // Changed from 80 to 8081
+          "hostPort": 8081,
           "protocol": "tcp"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/first-real-project-app",
+          "awslogs-group": "/ecs/marketvector-app",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }
