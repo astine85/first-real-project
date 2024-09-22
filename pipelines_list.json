@@ -1,7 +1,7 @@
 [
   {
     "name": "terraform-pipeline",
-    "repo": "https://github.com/astine85/market-vector.git",
+    "repo": "https://github.com/astine85/first-real-project.git",
     "branch": "main",
     "jenkinsfile": "terraform/Jenkinsfile"
   },
@@ -9,7 +9,7 @@
 
   {
     "name": "continuous-integration-continuous-deployment",
-    "repo": "https://github.com/astine85/market-vector.git",
+    "repo": "https://github.com/astine85/first-real-project.git",
     "branch": "main",
     "jenkinsfile": "continuous-integration-continuous-deployment/Jenkinsfile"
   }
