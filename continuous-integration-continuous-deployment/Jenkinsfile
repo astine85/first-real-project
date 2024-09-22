@@ -65,6 +65,18 @@ pipeline {
                 }
             }
         }
+        
+        stage('Update Task Definition File') {
+            steps {
+                script {
+                    
+                        def image = "${ECR_URI}:${VERSION}"
+                        def taskDefJson = readFile(file: TASK_DEF_JSON)
+                        taskDefJson = taskDefJson.replaceAll(/"image": "992382432814.dkr.ecr.us-east-1.amazonaws.com\/first-real-project:[^"]+"/, "\"image\": \"${image}\"")
+                        writeFile(file: TASK_DEF_JSON, text: taskDefJson)
+                    }
+                }
+            }
 
         stage('Register Task Definition') {
             steps {
