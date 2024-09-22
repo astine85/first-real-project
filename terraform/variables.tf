@@ -19,13 +19,13 @@ variable "subnet_ids" {
 variable "cluster_name" {
   description = "The name of the ECS cluster"
   type        = string
-  default     = "marketvector-ecs-cluster"
+  default     = "first-real-project-ecs-cluster"
 }
 
 variable "service_name" {
   description = "The name of the ECS service"
   type        = string
-  default     = "marketvector-ecs-service"
+  default     = "first-real-project-ecs-service"
 }
 
 variable "container_port" {
