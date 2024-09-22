@@ -1,25 +1,25 @@
 {
-  "cluster": "marketvector-ecs-cluster",
+  "cluster": "first-real-project-ecs-cluster",
   "serviceName": "jenkins-agent-service",
-  "taskDefinition": "arn:aws:ecs:us-east-1:905418280053:task-definition/jenkins-agent:1",
+  "taskDefinition": "arn:aws:ecs:us-east-1:992382432814:task-definition/jenkins-agent:1",
   "desiredCount": 0,
   "launchType": "FARGATE",
   "platformVersion": "LATEST",
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
-        "subnet-0b355c1e081bfb317",
-        "subnet-04e7a2e028dcb65ea"
+        "subnet-06b15b0000edcfb3d",
+        "subnet-091a1ef829c635ccc"
       ],
       "securityGroups": [
-        "sg-014fe9358bc77e613"
+        "sg-05f3512d8402fd560"
       ],
       "assignPublicIp": "ENABLED"
     }
   },
   "loadBalancers": [
     {
-      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:905418280053:targetgroup/marketvector-tg/05ebd826da417b44",
+      "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:992382432814:targetgroup/marketvector-tg/05ebd826da417b44",
       "containerName": "jenkins-agent",
       "containerPort": 50000
     }
