@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     parameters {
         string(name: 'BRANCH', defaultValue: 'main', description: 'Branch to build from')
         string(name: 'REPO_URL', defaultValue: 'https://github.com/astine85/first-real-project.git', description: 'Repository URL to build from')
@@ -10,13 +11,20 @@ pipeline {
         string(name: 'SERVICE_NAME', defaultValue: 'first-real-project-ecs-service', description: 'ECS Service Name')
         string(name: 'ECS_CLUSTER_NAME', defaultValue: 'first-real-project-ecs-cluster', description: 'ECS Cluster Name')
         string(name: 'ECR_URI', defaultValue: '992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project', description: 'ECR URI')
-        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'Image Name')
-        string(name: 'TARGET_GROUP_NAME', defaultValue: 'marketvector-tg', description: 'Target Group Name')
-        string(name: 'VPC_ID', defaultValue: 'vpc-006e106f9a60525b8', description: 'VPC ID') // Replace with your actual VPC ID
+        string(name: 'IMAGE_NAME', defaultValue: 'first-real-project-app', description: 'IMAGE_NAME')
     }
 
     environment {
-        GITHUB_CREDENTIAL = 'your-github-credentials-id' // Update with your actual credentials ID
+        BRANCH = "${params.BRANCH}"
+        REPO_URL = "${params.REPO_URL}"
+        VERSION = "${params.VERSION}"
+        TASK_DEF_JSON = "${params.TASK_DEF_JSON}"
+        CREATE_SERVICE_FILE = "${params.CREATE_SERVICE_FILE}"
+        UPDATE_SERVICE_FILE = "${params.UPDATE_SERVICE_FILE}"
+        SERVICE_NAME = "${params.SERVICE_NAME}"
+        ECS_CLUSTER_NAME = "${params.ECS_CLUSTER_NAME}"
+        ECR_URI = "${params.ECR_URI}"
+        IMAGE_NAME = "${params.IMAGE_NAME}"
     }
 
     stages {
@@ -28,7 +36,7 @@ pipeline {
 
         stage('Clone GitHub Repo') {
             steps {
-                git branch: "${params.BRANCH}", credentialsId: "${GITHUB_CREDENTIAL}", url: "${params.REPO_URL}"
+                git branch: "${BRANCH}", credentialsId: 'your-github-credentials-id', url: "${REPO_URL}"
             }
         }
 
@@ -40,73 +48,113 @@ pipeline {
             }
         }
 
-
-    stages {
-        stage('Build Docker Image') {
+        stage('Building Docker Image') {
             steps {
-                script {
-                    // Build your Docker image here
-                    sh 'docker build -t first-real-project-app:V0015 .'
-                }
+                sh "docker build -t ${IMAGE_NAME}:${VERSION} ."
             }
         }
 
         stage('Push To Elastic Container Registry') {
             steps {
                 script {
-                    // Log in to ECR and push the Docker image
-                    sh '''
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project
-                        docker tag first-real-project-app:V0015 992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project:V0015
-                        docker push 992382432814.dkr.ecr.us-east-1.amazonaws.com/first-real-project:V0015
-                    '''
+                    sh """
+                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ECR_URI}
+                    docker tag ${IMAGE_NAME}:${VERSION} ${ECR_URI}:${VERSION}
+                    docker push ${ECR_URI}:${VERSION}
+                    """
                 }
             }
         }
 
-        stage('Check and Create Target Group') {
+        stage('Register Task Definition') {
             steps {
                 script {
-                    def targetGroupName = 'marketvector-tg'
-                    def vpcId = '<YOUR_VPC_ID>'  // Replace with your VPC ID
-
-                    // Check if the target group exists
-                    def targetGroupArn = sh(script: """
-                        aws elbv2 describe-target-groups --names ${targetGroupName} --query 'TargetGroups[0].TargetGroupArn' --output text || echo "None"
+                    def taskDefArn = sh(script: """
+                        aws ecs register-task-definition --cli-input-json file://${TASK_DEF_JSON} --query 'taskDefinition.taskDefinitionArn' --output text
                     """, returnStdout: true).trim()
 
-                    if (targetGroupArn == "None") {
-                        echo "Target group ${targetGroupName} does not exist. Creating target group..."
-                        targetGroupArn = sh(script: """
-                            aws elbv2 create-target-group --name ${targetGroupName} --protocol HTTP --port 8081 --vpc-id ${vpcId} --query 'TargetGroups[0].TargetGroupArn' --output text
-                        """, returnStdout: true).trim()
+                    echo "Task Definition ARN: ${taskDefArn}"
 
-                        if (targetGroupArn == "") {
-                            error "Failed to create target group."
-                        }
+                    // Update task definition in service files
+                    def createServiceJson = readFile(file: CREATE_SERVICE_FILE)
+                    createServiceJson = createServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
+                    writeFile(file: CREATE_SERVICE_FILE, text: createServiceJson)
 
-                        echo "Created Target Group ARN: ${targetGroupArn}"
-                    } else {
-                        echo "Using existing Target Group ARN: ${targetGroupArn}"
-                    }
-
-                    // Update the create service JSON with the target group ARN
-                    def createServiceJson = readFile(file: 'path/to/create-ecs-service.json')
-                    createServiceJson = createServiceJson.replaceAll(/"targetGroupArn": "[^"]+"/, "\"targetGroupArn\": \"${targetGroupArn}\"")
-                    writeFile(file: 'path/to/create-ecs-service.json', text: createServiceJson)
+                    def updateServiceJson = readFile(file: UPDATE_SERVICE_FILE)
+                    updateServiceJson = updateServiceJson.replaceAll(/"taskDefinition": "arn:aws:ecs:[^"]+"/, "\"taskDefinition\": \"${taskDefArn}\"")
+                    writeFile(file: UPDATE_SERVICE_FILE, text: updateServiceJson)
                 }
             }
         }
 
-        // Add your other stages here (Register Task Definition, Stop all running tasks, etc.)
+        stage('Stop all running tasks') {
+            steps {
+                script {
+                    def serviceExists = sh(script: """
+                        aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
+                    """, returnStdout: true).trim()
+
+                    if (serviceExists) {
+                        sh """
+                        tasks=\$(aws ecs list-tasks --cluster ${ECS_CLUSTER_NAME} --service-name ${SERVICE_NAME} --desired-status RUNNING --query taskArns --output text)
+                        for task in \$tasks; do
+                            aws ecs stop-task --cluster ${ECS_CLUSTER_NAME} --task \$task
+                        done
+                        """
+                    } else {
+                        echo "Service ${SERVICE_NAME} does not exist. Skipping stop tasks step."
+                    }
+                }
+            }
+        }
+
+        stage('Wait for Tasks to Stop') {
+            steps {
+                script {
+                    def serviceExists = sh(script: """
+                        aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text
+                    """, returnStdout: true).trim()
+
+                    if (serviceExists) {
+                        timeout(time: 5, unit: 'MINUTES') {
+                            waitUntil {
+                                def tasks = sh(script: """
+                                    aws ecs list-tasks --cluster ${ECS_CLUSTER_NAME} --service-name ${SERVICE_NAME} --desired-status RUNNING --query taskArns --output text
+                                """, returnStdout: true).trim()
+
+                                return tasks == null || tasks.isEmpty()
+                            }
+                        }
+                    } else {
+                        echo "Service ${SERVICE_NAME} does not exist. Skipping wait for tasks to stop step."
+                    }
+                }
+            }
+        }
+
+        stage('Check and Update ECS Service') {
+            steps {
+                script {
+                    def clientToken = UUID.randomUUID().toString()
+                    sh """
+                    SERVICE_EXISTS=\$(aws ecs describe-services --cluster ${ECS_CLUSTER_NAME} --services ${SERVICE_NAME} --query "services[?status=='ACTIVE'].[serviceName]" --output text)
+
+                    if [ -z "\$SERVICE_EXISTS" ]; then
+                      echo "Service ${SERVICE_NAME} does not exist. Creating service..."
+                      aws ecs create-service --cli-input-json file://${CREATE_SERVICE_FILE} --client-token ${clientToken}
+                    else
+                      echo "Service ${SERVICE_NAME} exists. Updating service..."
+                      aws ecs update-service --cli-input-json file://${UPDATE_SERVICE_FILE}
+                    fi
+                    """
+                }
+            }
+        }
     }
 
     post {
         always {
-            echo "Pipeline completed."
-        }
-        failure {
-            echo "Pipeline failed."
+            echo 'Pipeline completed.'
         }
     }
 }
